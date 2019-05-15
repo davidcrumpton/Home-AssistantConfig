@@ -1,0 +1,324 @@
+- alias: Start HomeKit
+  trigger:
+  - platform: homeassistant
+    event: start
+  action:
+  - delay: 00:05
+  - service: homekit.start
+  id: 9eac808058604b1bb5524b5450753b31
+- alias: Trigger alarm while armed away
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.front_door
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.garage_and_slide_door
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.front_windows
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.back_windows
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.basement_windows
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.motion_sensor
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.front_door_open
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.upstairs_occupancy
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.my_ecobee_occupancy
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: alarm_control_panel.defender
+    state: armed_away
+  action:
+  - service: switch.turn_on
+    entity_id: switch.siren
+  - service: alarm_control_panel.alarm_trigger
+    entity_id: alarm_control_panel.defender
+  id: c30002099cdc41029e6773068a6696d8
+- alias: Trigger replace armed_night with armed_home
+  trigger:
+  - platform: state
+    entity_id: alarm_control_panel.defender
+    to: armed_night
+    for:
+      minutes: 1
+  action:
+  - service: switch.turn_off
+    entity_id: switch.siren
+  - service: alarm_control_panel.alarm_arm_home
+    data:
+      entity_id: alarm_control_panel.defender
+      code: !secret alarm_pin
+  id: 675fa06c6b3841e3ac13cdbc0537583e
+- alias: Trigger alarm while armed home
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.front_door
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.garage_and_slide_door
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.front_windows
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.back_windows
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.basement_windows
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.front_door_open
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: alarm_control_panel.defender
+    state: armed_home
+  action:
+  - service: switch.turn_on
+    entity_id: switch.siren
+  - service: alarm_control_panel.alarm_trigger
+    entity_id: alarm_control_panel.defender
+  id: 0738b10508aa41b2beef8522f405152c
+- alias: Send notification when alarm triggered
+  trigger:
+  - platform: state
+    entity_id: alarm_control_panel.defender
+    to: triggered
+  action:
+  - service: notify.notify
+    data_template:
+      message: ALARM! Triggered by {{ trigger.entity_id }}.
+  id: 5d78d7590d014c8ea055199ca5fa4ffe
+- alias: Porch Light on With Motion
+  id: '1553405294153'
+  trigger:
+  - entity_id: binary_sensor.front_door_motion
+    platform: state
+    to: 'on'
+  condition:
+    condition: or
+    conditions:
+    - condition: sun
+      before: sunrise
+    - condition: sun
+      after: sunset
+  action:
+  - service: homeassistant.turn_on
+    entity_id: input_boolean.porchmotion
+- alias: Turn off Front Porch Ten Minutes after Motion
+  id: '1553405294154'
+  trigger:
+  - entity_id: binary_sensor.front_door_motion
+    platform: state
+    to: 'off'
+    for:
+      minutes: 10
+  condition:
+    condition: or
+    conditions:
+    - condition: sun
+      before: sunrise
+    - condition: sun
+      after: sunset
+  action:
+  - service: homeassistant.turn_off
+    entity_id: input_boolean.porchmotion
+- alias: Master Temp High
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.upstairs_temperature
+    above: 78
+  condition:
+    condition: numeric_state
+    entity_id: counter.trigger_counter_mastercooler
+    below: 1
+  action:
+  - service: homeassistant.turn_on
+    entity_id:
+    - input_boolean.mastercooler
+  - service: counter.increment
+    entity_id: counter.trigger_counter_mastercooler
+  id: d91bee317cae4d40b1027e4195bc0fee
+- alias: RedRoom Temp High
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.upstairs_temperature
+    above: 78
+  condition:
+    condition: numeric_state
+    entity_id: counter.trigger_counter_openspacecooler
+    below: 1
+  action:
+  - service: homeassistant.turn_on
+    entity_id:
+    - input_boolean.openspacecooler
+  - service: counter.increment
+    entity_id: counter.trigger_counter_openspacecooler
+  id: f4bc4fd4f8824a8b8092dc58427e4b1c
+- alias: Heater on for 90 minutes
+  trigger:
+    platform: state
+    entity_id: input_boolean.hearontoolong
+    from: 'off'
+    to: 'on'
+    for:
+      hours: 0
+      minutes: 90
+      seconds: 0
+  action:
+    service: homeassistant.turn_off
+    data:
+      entity_id: input_boolean.hearontoolong
+  id: 1c7b684407b6494497f66e84b98f859d
+- alias: Nightly Reset
+  trigger:
+    platform: time
+    at: 00:00:05
+  action:
+  - service: counter.reset
+    entity_id: counter.trigger_counter_openspacecooler
+  - service: counter.reset
+    entity_id: counter.trigger_counter_mastercooler
+  - service: homeassistant.turn_off
+    entity_id: input_boolean.openspacecooler
+  - service: homeassistant.turn_off
+    entity_id: input_boolean.mastercooler
+  id: b2192faaa93541f8aece0a3e26a28192
+- id: garage_open_notification
+  alias: Garage Door Opened
+  trigger:
+  - platform: state
+    entity_id: cover.garage_door
+    to: open
+    for:
+      minutes: 30
+  action:
+  - service: notify.notify
+    data:
+      message: Garage Door Left Open Too Long
+- id: '1555645231412'
+  alias: alarm speaker off
+  trigger:
+  - entity_id: alarm_control_panel.defender
+    platform: state
+    to: armed_home
+  - entity_id: alarm_control_panel.defender
+    platform: state
+    to: disarmed
+  condition: []
+  action:
+  - data:
+      entity_id: switch.siren
+    service: switch.turn_off
+- alias: Turn off Ecobee if any window open
+  id: '1555645231418'
+  trigger:
+  - entity_id: binary_sensor.back_windows, binary_sensor.basement_windows, binary_sensor.front_windows
+    platform: state
+    to: 'on'
+    for:
+      minutes: 3
+  action:
+  - data:
+      entity_id: climate.my_ecobee
+      operation_mode: 'off'
+    service: climate.set_operation_mode
+- alias: Turn on Ecobee when all windows closed
+  id: '1555645231419'
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.back_windows, binary_sensor.basement_windows, binary_sensor.front_windows
+    to: 'off'
+    for:
+      minutes: 3
+  condition:
+    condition: and
+    conditions:
+    - condition: state
+      entity_id: binary_sensor.back_windows
+      state: 'off'
+    - condition: state
+      entity_id: binary_sensor.basement_windows
+      state: 'off'
+    - condition: state
+      entity_id: binary_sensor.front_windows
+      state: 'off'
+  action:
+  - data:
+      entity_id: climate.my_ecobee
+      operation_mode: auto
+    service: climate.set_operation_mode
+- id: '1557001662157'
+  alias: Disarm Alarm for Front Door Unlock Resident
+  trigger:
+  - entity_id: lock.front_door
+    from: locked
+    platform: state
+    to: unlocked
+  condition:
+  - condition: or
+    conditions:
+    - condition: template
+      value_template: '{{ (state_attr(''lock.front_door'', ''changed_by'')) == ''Minnie
+        Mouse'' }}'
+    - condition: template
+      value_template: '{{ (state_attr(''lock.front_door'', ''changed_by'')) == ''Mickey
+        Mouse'' }}'
+  action:
+  - service: alarm_control_panel.alarm_disarm
+    data:
+      entity_id: alarm_control_panel.defender
+      code: !secret alarm_pin
+- id: '1557012397849'
+  alias: Arm When All Not Home
+  trigger:
+  - entity_id: person.mickey_mouse
+    for: 00:05
+    from: home
+    platform: state
+    to: not_home
+  - entity_id: person.minnie_mouse
+    for: 00:05
+    from: home
+    platform: state
+    to: not_home
+
+  condition:
+    condition: and
+    conditions:
+    - condition: state
+      entity_id: person.minnie_mouse
+      state: not_home
+    - condition: template
+      value_template: "{{ (states('person.mickey_mouse') != 'home' or states('device_tracker.mouse_mickeys_iphone') != 'home') }} " 
+  action:
+  - service: alarm_control_panel.alarm_arm_away
+    data:
+      code: !secret alarm_pin
+      entity_id: alarm_control_panel.defender
+
+- id: '1557274341806'
+  alias: Notify SO When I leave Work
+  trigger:
+  - entity_id: device_tracker.mouse_mickeys_iphone
+    from: Work
+    platform: state
+    to: not_home
+  condition:
+  - after: '15:00'
+    condition: time
+  action:
+  - data:
+      message: mickey left work
+    service: notify.ios_iphonexr

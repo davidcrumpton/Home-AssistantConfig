@@ -1,0 +1,7 @@
+  all_windows:
+    name: wired_windows
+    view: true
+    entities:
+      - binary_sensor.basement_windows
+      - binary_sensor.back_windows
+      - binary_sensor.front_windows

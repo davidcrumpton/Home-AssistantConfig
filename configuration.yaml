@@ -1,0 +1,255 @@
+homeassistant:
+  # Name of the location where Home Assistant is running
+  name: Home
+  # Location required to calculate the time the sun rises and sets
+  latitude: !secret home_latitude
+  longitude: !secret home_longitude
+  # Impacts weather/sunrise data (altitude above sea level in meters)
+  elevation: 0
+  # metric for Metric, imperial for Imperial
+  unit_system: imperial
+  # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  time_zone: America/Denver
+  # Customization file
+  customize: !include customize.yaml
+
+# Configure a default setup of Home Assistant (frontend, api, etc)
+default_config:
+
+# Show the introduction message on startup.
+#introduction:
+
+# Uncomment this if you are using SSL/TLS, running in Docker container, etc.
+http:
+   base_url: !secret http_base_url
+
+
+logger:
+  default: warning
+  logs:
+    homeassistant.components.homekit: warning
+    pyhap: warning
+
+# Discover some devices automatically
+discovery:
+  ignore: 
+    - philips_hue
+#  enable:
+#    - homekit
+
+homekit:
+  auto_start: false
+  filter:
+    include_domains:
+      - alarm_control_panel
+      - light
+      - media_player
+      - input_boolean
+      - binary_sensor
+    exclude_entities:
+      - binary_sensor.front_door_online
+      - binary_sensor.front_door_open
+      - binary_sensor.front_door_motion
+      - binary_sensor.front_door_ding
+      - binary_sensor.my_ecobee_occupancy
+      - binary_sensor.remote_ui
+      - binary_sensor.upstairs_occupancy
+      
+  entity_config:
+    alarm_control_panel.defender:
+      code: !secret alarm_pin
+
+# Sensors
+sensor:
+  # Weather prediction
+  - platform: yr
+
+# Text to speech
+tts:
+  - platform: google_translate
+    service_name: google_say
+
+group: !include groups.yaml
+automation: !include automations.yaml
+script: !include scripts.yaml
+
+konnected:
+  access_token: !secret konnected_access_token
+  api_host: !secret konnected_api_host
+  devices:
+    - id: !secret konnected_device_id
+      binary_sensors:
+        - zone: 1
+          type: door
+          name: 'Konnected Front Door'
+        - zone: 2
+          type: door
+          name: 'garage or slide door'
+        - zone: 3
+          type: window
+          name: 'front windows'
+        - zone: 4
+          type: window
+          name: 'back windows'
+        - zone: 5
+          type: window
+          name: 'basement windows'
+        - zone: 6
+          type: motion
+          name: 'motion sensor'
+          inverse: false
+      switches:
+        - zone: out
+
+input_boolean:
+  porchmotion: 
+    name: Porch Motion
+    initial: off
+    icon: mdi:motion-sensor
+    
+  hearontoolong: 
+    name: Heater Timer
+    initial: off
+    icon: mdi:radiator
+
+  openspacecooler: 
+    name: OpenSpaceCooler
+    initial: off
+    icon: mdi:fan
+    
+  mastercooler: 
+    name: MasterCooler
+    initial: off
+    icon: mdi:fan
+
+  patriarchphone1l: 
+    name: patriarchphone1l
+    initial: off
+    icon: mdi:arrow-bottom-left
+
+  patriarchphone1r: 
+    name: patriarchphone1r
+    initial: off
+    icon: mdi:arrow-bottom-right
+
+  patriarchphone2l: 
+    name: patriarchphone2l
+    initial: off
+    icon: mdi:arrow-bottom-left
+
+  patriarchphone2r: 
+    name: patriarchphone2r
+    initial: off
+    icon: mdi:arrow-bottom-right
+
+  matriarchphone1l: 
+    name: matriarchphone1l
+    initial: off
+    icon: mdi:arrow-bottom-left
+
+  matriarchphone2r: 
+    name: matriarchphone1r
+    initial: off
+    icon: mdi:arrow-bottom-right
+
+alarm_control_panel:
+  - platform: manual_mqtt
+    state_topic: home/alarm
+    command_topic: home/alarm/set
+    name: defender
+    code: !secret alarm_pin
+    pending_time: 30
+    delay_time: 20
+    trigger_time: 120
+    disarm_after_trigger: false
+    disarmed:
+      trigger_time: 0
+    armed_home:
+      pending_time: 0
+      delay_time: 0
+    armed_away:
+      pending_time: 60
+      delay_time: 30
+    armed_night:
+      pending_time: 0
+      delay_time: 30
+      
+august:
+  login_method: phone
+  username: !secret august_username
+  password: !secret august_password
+ 
+cover:
+  - platform: myq
+    username: !secret myq_username
+    password: !secret myq_password
+    type: chamberlain
+  
+media_player:
+  - platform: yamaha
+
+ecobee:
+  api_key: !secret ecobee_key
+  
+counter:
+  trigger_counter_openspacecooler:
+    initial: 0
+    step: 1
+    restore: true
+    icon: mdi:counter
+  trigger_counter_mastercooler:
+    initial: 0
+    step: 1
+    restore: true
+    icon: mdi:counter
+  
+google_assistant:
+  project_id: !secret google_assistant_project_id
+  api_key: !secret google_assistant_api_key
+  exposed_domains:
+    - switch
+    - light
+    - media_player
+    - cover
+    - climate
+    - lock
+  entity_config:
+    switch.kitchen:
+      name: CUSTOM_NAME_FOR_GOOGLE_ASSISTANT
+      aliases:
+        - BRIGHT_LIGHTS
+        - ENTRY_LIGHTS
+    light.living_room:
+      expose: false
+      room: LIVING_ROOM
+    group.all_automations:
+      expose: false
+      
+asuswrt:
+  host: !secret asuswrt_host
+  username: !secret asuswrt_username
+  ssh_key: /config/id_rsa
+  sensors:
+    - upload
+    - download
+    - upload_speed
+    - download_speed
+
+zone:
+  - name: Work
+    latitude: !secret patriarch_work_latitude
+    longitude: !secret patriarch_work_longitude
+    icon: mdi:office-building
+    
+influxdb:
+  host: !secret influxdb_host
+  port: !secret influxdb_port
+  username: !secret influxdb_username
+  password: !secret influxdb_password
+  ssl: false
+  verify_ssl: false
+  max_retries: 3
+  default_measurement: state
+  tags:
+    instance: home
+    source: hass
